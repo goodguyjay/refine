@@ -1,0 +1,24 @@
+# Issue drafts (local work-in-progress)
+scripts/issue-templates/drafts/*.md
+!scripts/issue-templates/drafts/.gitkeep
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+.temp/
