@@ -41,13 +41,43 @@ if ! gh auth status &> /dev/null; then
     exit 1
 fi
 
+# extract frontmatter and body
+if ! grep -q "^---$" "$ISSUE_FILE"; then
+    echo -e "${RED}error: no frontmatter found in file${NC}"
+    exit 1
+fi
+
+# parse frontmatter
+FRONTMATTER=$(awk '/^---$/{flag=!flag; next} flag' "$ISSUE_FILE" | head -n -0)
+BODY=$(awk '/^---$/{ if(++count==2) flag=1; next } flag' "$ISSUE_FILE")
+
+# extract values from frontmatter
+TITLE=$(echo "$FRONTMATTER" | grep "^title:" | sed 's/title:\s*"*\(.*\)"*/\1/' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+LABELS=$(echo "$FRONTMATTER" | grep "^labels:" | sed 's/labels:\s*//' | sed 's/,\s*/,/g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+ASSIGNEES=$(echo "$FRONTMATTER" | grep "^assignees:" | sed 's/assignees:\s*//' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+MILESTONE=$(echo "$FRONTMATTER" | grep "^milestone:" | sed 's/milestone:\s*//' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+
+# create temp file with body
+TEMP_FILE=$(mktemp)
+echo "$BODY" > "$TEMP_FILE"
+
+# build gh command
+GH_CMD="gh issue create --body-file \"$TEMP_FILE\""
+[ -n "$TITLE" ] && GH_CMD="$GH_CMD --title \"$TITLE\""
+[ -n "$LABELS" ] && GH_CMD="$GH_CMD --label \"$LABELS\""
+[ -n "$ASSIGNEES" ] && GH_CMD="$GH_CMD --assignee \"$ASSIGNEES\""
+[ -n "$MILESTONE" ] && GH_CMD="$GH_CMD --milestone \"$MILESTONE\""
+
 # create the issue
 echo -e "${YELLOW}creating issue from: $ISSUE_FILE${NC}"
 echo ""
 
-if gh issue create --body-file "$ISSUE_FILE"; then
+if eval $GH_CMD; then
     echo ""
     echo -e "${GREEN}✓ issue created successfully${NC}"
+    
+    # cleanup temp file
+    rm -f "$TEMP_FILE"
     
     # archive the draft
     ARCHIVE_DIR="scripts/issue-templates/created"
@@ -62,5 +92,6 @@ if gh issue create --body-file "$ISSUE_FILE"; then
 else
     echo ""
     echo -e "${RED}✗ failed to create issue${NC}"
+    rm -f "$TEMP_FILE"
     exit 1
 fi
