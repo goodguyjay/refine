@@ -19,18 +19,11 @@
 
     @if (currentFile(); as file) {
         <div class="file-info">
-            <h2>loaded file</h2>
-            <p><strong>name:</strong> {{ file.name }}</p>
-            <p><strong>path:</strong> {{ file.path }}</p>
+            <h2>{{ file.name }}</h2>
             <p><strong>size:</strong> {{ file.size | number }} bytes</p>
-            @if (file.isLarge) {
-                <p class="warning">large file detected</p>
-            }
-            <details>
-                <summary>content preview (first 500 chars)</summary>
-                <pre>{{ file.content.slice(0, 500) }}...</pre>
-            </details>
         </div>
+
+        <app-preview [markdownContent]="file.content"/>
     }
 
     <router-outlet/>

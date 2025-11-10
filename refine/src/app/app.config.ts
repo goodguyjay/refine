@@ -1,11 +1,8 @@
-import {
-    ApplicationConfig,
-    provideZoneChangeDetection,
-} from "@angular/core";
+import {ApplicationConfig, provideZoneChangeDetection,} from "@angular/core";
 import {provideRouter} from "@angular/router";
 
 import {routes} from "./app.routes";
-import {FileService, TauriFileService} from "./core/services";
+import {FileService, MarkdownService, TauriFileService, TauriMarkdownService} from "./core/services";
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -14,6 +11,10 @@ export const appConfig: ApplicationConfig = {
         {
             provide: FileService,
             useClass: TauriFileService,
+        },
+        {
+            provide: MarkdownService,
+            useClass: TauriMarkdownService
         }
     ],
 };
