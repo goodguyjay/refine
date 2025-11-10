@@ -4,11 +4,12 @@ import {RouterOutlet} from '@angular/router';
 import {FileService} from './core/services';
 import {FileData} from './core/models';
 import {switchMap} from 'rxjs/operators';
+import {PreviewComponent} from "./features/preview/preview.component";
 
 @Component({
     selector: "app-root",
     standalone: true,
-    imports: [CommonModule, RouterOutlet],
+    imports: [CommonModule, RouterOutlet, PreviewComponent],
     templateUrl: "./app.component.html",
     styleUrl: "./app.component.css",
 })

@@ -1,4 +1,5 @@
 use crate::commands::file::{open_file_dialog, read_file};
+use crate::commands::markdown::parse_markdown;
 
 mod commands;
 mod error;
@@ -9,7 +10,11 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file_dialog, read_file])
+        .invoke_handler(tauri::generate_handler![
+            open_file_dialog,
+            read_file,
+            parse_markdown
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
