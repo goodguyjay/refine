@@ -14,6 +14,12 @@ pub enum AppError {
     #[error("file too large: {size} bytes (max {max} bytes)")]
     FileTooLarge { size: u64, max: u64 },
 
+    #[error("typst compilation failed: {0}")]
+    TypstCompilationError(String),
+
+    #[error("markdown parsing error: {0}")]
+    MarkdownParsingError(String),
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }

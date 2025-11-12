@@ -1,5 +1,6 @@
 use crate::commands::file::{open_file_dialog, read_file};
 use crate::commands::markdown::parse_markdown;
+use crate::commands::typst::markdown_to_pdf;
 
 mod commands;
 mod error;
@@ -13,7 +14,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             open_file_dialog,
             read_file,
-            parse_markdown
+            parse_markdown,
+            markdown_to_pdf
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
