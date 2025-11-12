@@ -26,6 +26,10 @@ serde_json = "1"
 # md parsing
 comrak = "0.3"
 
+# typst compilation
+typst = "0.14"
+typst-pdf = "0.14"
+
 # logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
@@ -33,4 +37,3 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 # error handling
 anyhow = "1.0"
 thiserror = "2.0"
-
