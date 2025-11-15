@@ -8,6 +8,7 @@ use typst::syntax::{FileId, Source};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
 use typst::{Library, LibraryExt, World};
+use typst_kit::fonts::FontSearcher;
 use typst_pdf::PdfOptions;
 
 struct MinimalWorld {
@@ -21,10 +22,21 @@ impl MinimalWorld {
     fn new(content: String) -> Self {
         let source = Source::detached(content);
 
+        let mut searcher = FontSearcher::new();
+        searcher.include_system_fonts(true);
+
+        let font_result = searcher.search_with(["../../assets/fonts/"]);
+
+        let fonts: Vec<Font> = font_result
+            .fonts
+            .iter()
+            .filter_map(|slot| slot.get())
+            .collect();
+
         Self {
             library: LazyHash::new(Library::default()),
-            book: LazyHash::new(FontBook::new()),
-            fonts: vec![],
+            book: LazyHash::new(font_result.book),
+            fonts,
             source,
         }
     }
@@ -89,7 +101,7 @@ fn markdown_to_typst(markdown: &str) -> Result<String, AppError> {
         )
 
         #set text(
-            font: "Linux Libertine",
+            font: "Inter",
             size: 11pt,
         )
 

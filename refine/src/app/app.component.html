@@ -1,30 +1,98 @@
-<main class="container">
-    <h1>refine</h1>
-    <p>beautiful PDFs from markdown, effortlessly</p>
+<div class="flex flex-col h-screen bg-zinc-950 text-zinc-100">
+    <!-- top bar -->
+    <header class="flex items-center justify-between px-6 py-4 bg-zinc-900/50 backdrop-blur-xl border-b border-zinc-800">
+        <!-- left: branding -->
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg"></div>
+            <div>
+                <h1 class="text-lg font-semibold text-zinc-50">refine</h1>
+                <span class="text-xs text-zinc-400">beautiful PDFs from markdown</span>
+            </div>
+        </div>
 
-    <div class="row">
-        <button
-                type="button"
-                (click)="openFile()"
-                [disabled]="isLoading()">
-            {{ isLoading() ? 'loading...' : 'open markdown file' }}
-        </button>
-    </div>
+        <!-- right: actions -->
+        <div class="flex items-center gap-3">
+            <button
+                    type="button"
+                    (click)="openFile()"
+                    [disabled]="isLoading()"
+                    class="px-4 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200">
+                {{ isLoading() ? 'loading...' : 'open file' }}
+            </button>
 
+            <button
+                    type="button"
+                    (click)="exportPdf()"
+                    [disabled]="!currentFile() || isExporting()"
+                    class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-lg shadow-lg shadow-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200">
+                {{ isExporting() ? 'exporting...' : 'export PDF' }}
+            </button>
+        </div>
+    </header>
+
+    <!-- error banner -->
     @if (error()) {
-        <div class="error">
-            <p>error: {{ error() }}</p>
+        <div class="px-6 py-3 bg-red-500/10 border-b border-red-500/20">
+            <p class="text-sm text-red-400">{{ error() }}</p>
         </div>
     }
 
+    <!-- main split layout -->
     @if (currentFile(); as file) {
-        <div class="file-info">
-            <h2>{{ file.name }}</h2>
-            <p><strong>size:</strong> {{ file.size | number }} bytes</p>
-        </div>
+        <div class="flex flex-1 overflow-hidden">
+            <!-- left: source -->
+            <div class="flex-1 flex flex-col overflow-hidden border-r border-zinc-800">
+                <!-- source header -->
+                <div class="px-6 py-3 bg-zinc-900/30 border-b border-zinc-800">
+                    <h2 class="text-sm font-medium text-zinc-300">{{ file.name }}</h2>
+                    <p class="text-xs text-zinc-500">{{ file.size | number }} bytes</p>
+                </div>
 
-        <app-preview [markdownContent]="file.content"/>
+                <!-- source content -->
+                <div class="flex-1 overflow-auto p-6 bg-zinc-900">
+                    <pre class="text-sm text-zinc-300 leading-relaxed font-mono whitespace-pre-wrap">{{ file.content }}</pre>
+                </div>
+            </div>
+
+            <!-- right: preview -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- preview header -->
+                <div class="px-6 py-3 bg-zinc-900/30 border-b border-zinc-800">
+                    <h2 class="text-sm font-medium text-zinc-300">preview</h2>
+                </div>
+
+                <!-- preview content -->
+                <div class="flex-1 overflow-auto p-6 bg-zinc-950">
+                    <div class="max-w-3xl mx-auto">
+                        <app-preview [markdownContent]="file.content"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    } @else {
+        <!-- empty state -->
+        <div class="flex flex-col items-center justify-center flex-1">
+            <div class="text-center space-y-4">
+                <div class="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-2xl flex items-center justify-center">
+                    <svg class="w-8 h-8 text-blue-400 fill-none stroke-current" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-zinc-100 mb-2">no file loaded</h2>
+                    <p class="text-sm text-zinc-400 mb-6">open a markdown file to get started</p>
+                </div>
+                <button
+                        type="button"
+                        (click)="openFile()"
+                        class="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-lg shadow-lg shadow-blue-500/20 transition-all duration-200">
+                    open file
+                </button>
+            </div>
+        </div>
     }
 
     <router-outlet/>
-</main>
+    <app-toast-container/>
+</div>
