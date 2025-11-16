@@ -95,6 +95,22 @@ import {Subscription} from "rxjs";
         padding-left: 2em;
       }
 
+      :host ::ng-deep .preview-content ul {
+        list-style-type: disc;
+      }
+
+      :host ::ng-deep .preview-content ol {
+        list-style-type: decimal;
+      }
+
+      :host ::ng-deep .preview-content ul ul {
+        list-style-type: circle;
+      }
+
+      :host ::ng-deep .preview-content ul ul ul {
+        list-style-type: square;
+      }
+
       :host ::ng-deep .preview-content li {
         margin: 0.25em 0;
       }
