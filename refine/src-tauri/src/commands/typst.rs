@@ -111,19 +111,24 @@ fn markdown_to_typst(markdown: &str) -> Result<String, AppError> {
     );
 
     // walk the ast and convert to typst
-    walk_ast(root, &mut output)?;
+    walk_ast(root, &mut output, 0, None)?;
 
     tracing::debug!("typst output:\n{}", output);
 
     Ok(output)
 }
 
-fn walk_ast<'a>(node: &'a AstNode<'a>, output: &mut String) -> Result<(), AppError> {
+fn walk_ast<'a>(
+    node: &'a AstNode<'a>,
+    output: &mut String,
+    list_depth: usize,
+    parent_list_type: Option<&comrak::nodes::ListType>,
+) -> Result<(), AppError> {
     match &node.data.borrow().value {
         NodeValue::Document => {
             // just process children
             for child in node.children() {
-                walk_ast(child, output)?;
+                walk_ast(child, output, list_depth, parent_list_type)?;
             }
         }
 
@@ -133,7 +138,7 @@ fn walk_ast<'a>(node: &'a AstNode<'a>, output: &mut String) -> Result<(), AppErr
             output.push(' ');
 
             for child in node.children() {
-                walk_ast(child, output)?;
+                walk_ast(child, output, list_depth, parent_list_type)?;
             }
 
             output.push_str("\n\n");
@@ -141,7 +146,7 @@ fn walk_ast<'a>(node: &'a AstNode<'a>, output: &mut String) -> Result<(), AppErr
 
         NodeValue::Paragraph => {
             for child in node.children() {
-                walk_ast(child, output)?;
+                walk_ast(child, output, list_depth, parent_list_type)?;
             }
             output.push_str("\n\n");
         }
@@ -156,7 +161,7 @@ fn walk_ast<'a>(node: &'a AstNode<'a>, output: &mut String) -> Result<(), AppErr
         NodeValue::Strong => {
             output.push('*');
             for child in node.children() {
-                walk_ast(child, output)?;
+                walk_ast(child, output, list_depth, parent_list_type)?;
             }
             output.push('*');
         }
@@ -164,7 +169,7 @@ fn walk_ast<'a>(node: &'a AstNode<'a>, output: &mut String) -> Result<(), AppErr
         NodeValue::Emph => {
             output.push('_');
             for child in node.children() {
-                walk_ast(child, output)?;
+                walk_ast(child, output, list_depth, parent_list_type)?;
             }
             output.push('_');
         }
@@ -173,10 +178,71 @@ fn walk_ast<'a>(node: &'a AstNode<'a>, output: &mut String) -> Result<(), AppErr
             output.push(' ');
         }
 
+        NodeValue::List(list_data) => {
+            for child in node.children() {
+                walk_ast(child, output, list_depth, Some(&list_data.list_type))?;
+            }
+
+            output.push('\n');
+        }
+
+        NodeValue::Item(_) => {
+            let indent = "  ".repeat(list_depth);
+            output.push_str(&indent);
+
+            // determine list marker based on parent list type
+            match parent_list_type {
+                Some(comrak::nodes::ListType::Bullet) => {
+                    output.push_str("- ");
+                }
+                Some(comrak::nodes::ListType::Ordered) => {
+                    output.push_str("+ ");
+                }
+                None => {
+                    tracing::debug!("list item without parent list type... how?");
+                    output.push_str("- "); // shouldnt happen... but default to bullet
+                }
+            }
+
+            for child in node.children() {
+                walk_ast(child, output, list_depth + 1, parent_list_type)?;
+            }
+
+            output.push('\n');
+        }
+
+        NodeValue::Code(code) => {
+            output.push('`');
+            let code_str = std::str::from_utf8(code).map_err(|e| {
+                AppError::MarkdownParsingError(format!("invalid UTF-8 code: {}", e))
+            })?;
+            output.push_str(code_str);
+            output.push('`');
+        }
+
+        NodeValue::CodeBlock(block) => {
+            output.push_str("```");
+
+            if !block.info.is_empty() {
+                let lang = std::str::from_utf8(&block.info)
+                    .map_err(|e| AppError::MarkdownParsingError(format!("invalid UTF-8: {}", e)))?;
+                output.push_str(lang);
+            }
+
+            output.push('\n');
+
+            let code_content = std::str::from_utf8(&block.literal).map_err(|e| {
+                AppError::MarkdownParsingError(format!("invalid UTF-8 code block: {}", e))
+            })?;
+            output.push_str(code_content);
+
+            output.push_str("```\n\n");
+        }
+
         _ => {
             tracing::debug!("ignoring unsupported node: {:?}", node.data.borrow().value);
             for child in node.children() {
-                walk_ast(child, output)?;
+                walk_ast(child, output, list_depth, parent_list_type)?;
             }
         }
     }
@@ -296,5 +362,130 @@ mod tests {
 
         assert!(typst.contains("*bold*"));
         assert!(typst.contains("_italic_"));
+    }
+
+    #[test]
+    fn test_unordered_list() {
+        let markdown = "- item 1\n- item 2\n- item 3";
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("generated typst:\n{}", typst);
+
+        assert!(typst.contains("- item 1"));
+        assert!(typst.contains("- item 2"));
+        assert!(typst.contains("- item 3"));
+    }
+
+    #[test]
+    fn test_ordered_list() {
+        let markdown = "1. first\n2. second\n3. third";
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("Generated typst:\n{}", typst);
+
+        assert!(typst.contains("+ first"));
+        assert!(typst.contains("+ second"));
+        assert!(typst.contains("+ third"));
+    }
+
+    #[test]
+    fn test_nested_list() {
+        let markdown = "- parent\n  - child\n    - grandchild";
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("Generated typst:\n{}", typst);
+
+        assert!(typst.contains("- parent"));
+        assert!(typst.contains("  - child"));
+        assert!(typst.contains("    - grandchild"));
+    }
+
+    #[test]
+    fn test_mixed_nested_lists() {
+        let markdown = r#"- unordered parent
+  1. ordered child
+  2. another ordered child
+- another unordered parent
+  - nested unordered
+    1. deeply nested ordered"#;
+
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("Generated typst:\n{}", typst);
+
+        assert!(typst.contains("- unordered parent"));
+        assert!(typst.contains("  + ordered child"));
+        assert!(typst.contains("  + another ordered child"));
+        assert!(typst.contains("- another unordered parent"));
+        assert!(typst.contains("  - nested unordered"));
+        assert!(typst.contains("    + deeply nested ordered"));
+    }
+
+    #[test]
+    fn test_lists_full_pipeline() {
+        let markdown = r#"# Shopping List
+
+## Groceries
+- milk
+- eggs
+- bread
+
+## Tasks
+1. buy groceries
+2. clean house
+3. write code
+   - debug issue #8
+   - write tests"#;
+
+        let typst = markdown_to_typst(markdown).unwrap();
+        let pdf_bytes = compile_typst(typst).unwrap();
+
+        assert!(pdf_bytes.len() > 1000);
+        assert_eq!(&pdf_bytes[0..4], b"%PDF");
+
+        println!("full pipeline test passed: {} bytes", pdf_bytes.len());
+    }
+
+    #[test]
+    fn test_inline_code() {
+        let markdown = "use `println!` for output and `unwrap()` carefully";
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("Generated typst:\n{}", typst);
+
+        assert!(typst.contains("`println!`"));
+        assert!(typst.contains("`unwrap()`"));
+    }
+
+    #[test]
+    fn test_code_block_with_language() {
+        let markdown = r#"```rust
+fn main() {
+    println!("hello");
+}
+````"#;
+
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("Generated typst:\n{}", typst);
+
+        assert!(typst.contains("```rust"));
+        assert!(typst.contains("fn main()"));
+        assert!(typst.contains("println!"));
+    }
+
+    #[test]
+    fn test_code_block_without_language() {
+        let markdown = r#"```
+some code
+without language
+```"#;
+
+        let typst = markdown_to_typst(markdown).unwrap();
+
+        println!("Generated typst:\n{}", typst);
+
+        assert!(typst.contains("```\nsome code"));
+        assert!(typst.contains("without language"));
     }
 }

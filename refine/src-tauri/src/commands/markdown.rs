@@ -18,6 +18,8 @@ pub async fn parse_markdown(content: String) -> Result<String, ErrorResponse> {
 
     let html = markdown_to_html(&content, &options);
 
+    tracing::info!("generated html:\n{}", html);
+
     tracing::info!("markdown parsed successfully ({} bytes html)", html.len());
 
     Ok(html)
